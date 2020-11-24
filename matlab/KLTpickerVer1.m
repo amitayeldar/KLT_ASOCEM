@@ -145,9 +145,12 @@ parfor expNum = 1:numOfMicro
         area_mat_sz = 9; % after down scaling to 200*200
         % run ASOCEM
         [phi] = ASOCEM(I0,area_mat_sz,smoothing_term,maxIterAsocem);
+        if phi==ones(size(phi)) % all is contamination dont pick
+            continue
+        end
 
         % get rid of blubs the size of the particle
-        phi_seg = zeros(size(phi));
+        phi_seg = imbinarize(zeros(size(phi)));
         scalingSz = 200/max(size(I0));
         min_bulb_size = floor(2*scalingSz*particle_size/2);
 %         se_dil = strel('disk',ceil(max(1,scalingSz*particle_size/8)));
@@ -177,7 +180,11 @@ parfor expNum = 1:numOfMicro
     else
         phi_seg = zeros(size(noiseMc));
     end
-    imwrite(phi_seg,['./',microName,'.png'])
+    f=figure('visible', 'off');
+    subplot(1,2,1); imshow(cryo_downsample(I0,200),[]);
+    subplot(1,2,2); imshow(imresize(phi_seg,[200,200]),[]);
+    mkdir([output_dir,'/AsocamFigs']);
+    saveas(f,[output_dir,'/AsocamFigs/',microName,'.jpg'])
     %% Estimating particle and noise RPSD
     [apprxCleanPsd,apprxNoisePsd,~,R,~,stopPar] = rpsd_estimation(noiseMc,phi_seg,patchSz,maxIter,gpu_use);
     if stopPar==1 % maxIter happend, skip to next micro graph

@@ -1,4 +1,4 @@
-function [cov_mat,R_est] = cov_estimation(I,phi,idx_mat,max_d,mean_region,sign)
+function [cov_mat,R_est,region_problem] = cov_estimation(I,phi,idx_mat,max_d,mean_region,sign)
 
 
 % set region of interest
@@ -9,7 +9,8 @@ if sign == -1
     region = phi <= 0; 
 end
 if nnz(region)<1
-    error('phi converged to trivial case')
+     region_problem = 1; %region is not big enough to estimate cov
+     return
 end
 
 % make I=image "square"
@@ -31,11 +32,13 @@ end
  
  [R_est,~,cnt]=cryo_epsdR(I,samples_idx,max_d);
  if size(R_est,1)<max(idx_mat(:))
-     error('region is not big enough to estimate cov');
+     region_problem = 1; %region is not big enough to estimate cov
+     cov_mat = 0;
+     return
  end
     cov_mat = R_est(idx_mat(:));
     cov_mat = reshape(cov_mat,sqrt(size(cov_mat,1)),sqrt(size(cov_mat,1)));
-
+    region_problem = 0; %there is no problem
     
 
 end

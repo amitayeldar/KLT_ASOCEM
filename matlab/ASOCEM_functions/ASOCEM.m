@@ -60,7 +60,9 @@ phi_0 = phi_0./max(abs(phi_0(:)));
 
 %% chan vese time process
 [phi,mu0_est,R0_est,mu1_est,R1_est] = chan_vese_process(I,phi_0,cov_mat_sz,dt,mu,nu,eta,Eps,maxIter,tol);
-
+if phi == ones(size(phi)) % we dont want to use this micrograph
+    return
+end
 
 % the smaller area will considered to be the contamination
 t = ceil(area_mat_sz/2+1);

@@ -39,8 +39,17 @@ for iter = 1:maxIter
     mu1_est = mean( I( phi <= 0 ) );
     
     %compute covariance
-    [s0,R0_est] = cov_estimation(I,phi,idx_mat,max_d,mu0_est,1);
-    [s1,R1_est] = cov_estimation(I,phi,idx_mat,max_d,mu1_est,-1);
+    [s0,R0_est,region_problem] = cov_estimation(I,phi,idx_mat,max_d,mu0_est,1);
+    if region_problem==1 %region is not big enough to estimate cov
+        phi = ones(size(phi)); % we dont want to use this micrograph
+        return
+    end
+    [s1,R1_est,region_problem] = cov_estimation(I,phi,idx_mat,max_d,mu1_est,-1);
+    if region_problem==1 %region is not big enough to estimate cov
+        phi = ones(size(phi)); % we dont want to use this micrograph
+        return
+    end
+        
     % sizes derived from cov matrix
     s1_inv = pinv(s0);
     s2_inv = pinv(s1);

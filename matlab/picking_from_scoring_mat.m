@@ -58,10 +58,8 @@ function [numOfPickedPar,numOfPickedNoise] = picking_from_scoring_mat(logTestN,p
             [i_row, i_col] = ind2sub(sz,I);
             i_rowPatch = (i_row-1)+ceil((patchSzFun+patchSzN)/2); i_colPatch = (i_col-1)+ceil((patchSzFun+patchSzN)/2); % change index to middle of the patch.  
             ri = max(i_rowPatch-t,1); rf = min(i_rowPatch+t,size(phi_seg,1));
-            ci = max(i_colPatch-t,1); cf = min(i_colPatch+t,size(phi_seg,2));
-            
+            ci = max(i_colPatch-t,1); cf = min(i_colPatch+t,size(phi_seg,2));   
             if nnz(phi_seg(ri:rf,ci:cf)) > 0
-                scoringMat(i_row, i_col) = -inf;
                 rowIdxB = rowIdx-i_row;
                 colIdxB = colIdx-i_col;
                 Rsquare = rowIdxB.^2+colIdxB.^2;
@@ -86,12 +84,17 @@ function [numOfPickedPar,numOfPickedNoise] = picking_from_scoring_mat(logTestN,p
             end
             [i_row, i_col] = ind2sub(sz,I);
             i_rowPatch = (i_row-1)+ceil((patchSzFun+patchSzN)/2); i_colPatch = (i_col-1)+ceil((patchSzFun+patchSzN)/2); % change index to middle of the patch.  
-            if phi_seg(i_rowPatch,i_colPatch) == 1
-                scoringMat(i_row, i_col) = -inf;
-                continue
-            end
             rowIdxB = rowIdx-i_row;
             colIdxB = colIdx-i_col;
+            ri = max(i_rowPatch-t,1); rf = min(i_rowPatch+t,size(phi_seg,1));
+            ci = max(i_colPatch-t,1); cf = min(i_colPatch+t,size(phi_seg,2));
+            if nnz(phi_seg(ri:rf,ci:cf)) > 0
+                rowIdxB = rowIdx-i_row;
+                colIdxB = colIdx-i_col;
+                Rsquare = rowIdxB.^2+colIdxB.^2;
+                scoringMat(Rsquare<=(rDel^2)) = -inf;
+                continue
+            end
             Rsquare = rowIdxB.^2+colIdxB.^2;
             scoringMat(Rsquare<=(rDel^2)) = -inf;
             fprintf(particlesCordinateBox,'%.0f\t%.0f\t%.0f\t%.0f\n',(1/mgScale)*(i_colPatch - floor(patchSzPickBox/2)),(mgBigSz(1)+1)-(1/mgScale)*(i_rowPatch + floor(patchSzPickBox/2)),(1/mgScale)*patchSzPickBox,(1/mgScale)*patchSzPickBox);
@@ -130,13 +133,18 @@ function [numOfPickedPar,numOfPickedNoise] = picking_from_scoring_mat(logTestN,p
             end
             [i_row, i_col] = ind2sub(sz,I);
             i_rowPatch = (i_row-1)+ceil((patchSzFun+patchSzN)/2); i_colPatch = (i_col-1)+ceil((patchSzFun+patchSzN)/2); % change index to middle of the patch.  
-            if phi_seg(i_rowPatch,i_colPatch) == 1
-                scoringMat(i_row, i_col) = inf
-                continue
-            end
             rowIdxB = rowIdx-i_row;
             colIdxB = colIdx-i_col;
             Rsquare = rowIdxB.^2+colIdxB.^2;
+            ri = max(i_rowPatch-t,1); rf = min(i_rowPatch+t,size(phi_seg,1));
+            ci = max(i_colPatch-t,1); cf = min(i_colPatch+t,size(phi_seg,2));
+            if nnz(phi_seg(ri:rf,ci:cf)) > 0
+                rowIdxB = rowIdx-i_row;
+                colIdxB = colIdx-i_col;
+                Rsquare = rowIdxB.^2+colIdxB.^2;
+                scoringMat(Rsquare<=(rDel^2)) = inf;
+                continue
+            end
             scoringMat(Rsquare<=(rDel^2)) = inf;
             fprintf(noiseImagesCordinateBox,'%.0f\t%.0f\t%.0f\t%.0f\n',(1/mgScale)*(i_colPatch - floor(patchSzPickBox/2)),(mgBigSz(1)+1)-(1/mgScale)*(i_rowPatch + floor(patchSzPickBox/2)),(1/mgScale)*patchSzPickBox,(1/mgScale)*patchSzPickBox);
             fprintf(noiseImagesCordinateStar,'%.0f\t%.0f\n',(1/mgScale)*i_colPatch,(mgBigSz(1)+1)-(1/mgScale)*i_rowPatch);
