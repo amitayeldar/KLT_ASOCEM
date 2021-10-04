@@ -1,88 +1,118 @@
-function [phi,mu0_est,R0_est,mu1_est,R1_est] = chan_vese_process(I,phi_0,cov_mat_sz,dt,mu,nu,eta,Eps,maxIter,tol)
+function [phi,mu0_est,cov0_est,mu1_est,cov1_est] = chan_vese_process(I,phi_0,cov_mat_sz,dt,mu,nu,eta,Eps,maxIter,tol,fast_flag)
 % This function compute the chan vese level set function phi under the assumption of radial autocorrelation.
 
-%% initial step
-max_d = floor(sqrt(2)*sqrt(cov_mat_sz)) + 1;
-% from 1d isotropic autocorr to a 2d covarience matrix
-idx_cell= cell(cov_mat_sz,1);
-cnt = 1;
-for j=1:sqrt(cov_mat_sz)
-    for i=1:sqrt(cov_mat_sz)
-       idx_cell{cnt} = [i,j];
-       cnt = cnt + 1;
-    end
-end
-% construct index matrix for cov_rad_mat
-mat_for_estimate_r_cov_samp_point = ones(max_d,max_d);
-[~,x,~]=cryo_epsdR(mat_for_estimate_r_cov_samp_point,1:max_d^2,max_d);
-idx_mat = zeros(cov_mat_sz,cov_mat_sz);
-for i = 1:cov_mat_sz
-    for j = 1:cov_mat_sz
-        d_ij = norm(idx_cell{i}-idx_cell{j});
-        idx_mat(i,j) = find(x==d_ij);
-    end
-end
-
-  
 %% time evolution process
 % set boundary condition and start iteration
 phi = NeumannBoundCondMod(phi_0);
 for iter = 1:maxIter
-    % compute mean
     if nnz(phi>0)==0
         break
     end
     if nnz(phi<=0)==0
         break
     end
-    mu0_est = mean( I( phi > 0 ) );
-    mu1_est = mean( I( phi <= 0 ) );
+    % compute mean and cov
     
-    %compute covariance
-    [s0,R0_est,region_problem] = cov_estimation(I,phi,idx_mat,max_d,mu0_est,1);
-    if region_problem==1 %region is not big enough to estimate cov
-        phi = ones(size(phi)); % we dont want to use this micrograph
-        return
-    end
-    [s1,R1_est,region_problem] = cov_estimation(I,phi,idx_mat,max_d,mu1_est,-1);
-    if region_problem==1 %region is not big enough to estimate cov
-        phi = ones(size(phi)); % we dont want to use this micrograph
-        return
-    end
-        
-    % sizes derived from cov matrix
-    s1_inv = pinv(s0);
-    s2_inv = pinv(s1);
-    logdet0 = logdetAmitay(s0);
-    logdet1 = logdetAmitay(s1);
+    % store patches
+    cnt_0 = 1;
+    cnt_1 = 1;
+
     area = sqrt(cov_mat_sz);
-    % compute phi
-    for i = 2 + floor(area/2) : size(phi,1)-1 - floor(area/2)
-        for j = 2 + floor(area/2) : size(phi,2)-1 - floor(area/2)  
-            f = I(i-floor(area/2):i+floor(area/2),j-floor(area/2):j+floor(area/2));        
-            f = f(:);
-            phi(i,j) = timeEvCov(f,phi(i-1:i+1,j-1:j+1),mu,nu,...
-              mu0_est,s1_inv,logdet0,mu1_est,s2_inv,logdet1,dt,eta,Eps);
+    patch_0 = zeros(area^2,1);
+    patch_1 = zeros(area^2,1);
+    for i=1:floor(size(I,1)/area)
+        for j=1:floor(size(I,2)/area)
+            tmp = phi((i-1)*area+1:i*area,(j-1)*area+1:j*area);           
+            if nnz(tmp>=0)>0   
+                patch_0(:,cnt_0) = reshape(I((i-1)*area+1:i*area,(j-1)*area+1:j*area),[],1);
+                cnt_0 = cnt_0 +1;
+            end
+            if nnz(tmp<=0)>0
+                patch_1(:,cnt_1) = reshape(I((i-1)*area+1:i*area,(j-1)*area+1:j*area),[],1);
+                cnt_1 = cnt_1 +1;
+            end
+        end
+    end
+    if size(patch_0,2)<=10
+        phi = ones(size(phi)); % we dont want to use this micrograph
+        return
+    end
+    if size(patch_1,2)<=10
+        phi = ones(size(phi)); % we dont want to use this micrograph
+        return
+    end
+    % compte mean and cov
+    mu0_est = mean(patch_0,2);
+    cov0_est = cov(patch_0');
+    mu1_est = mean(patch_1,2);
+    cov1_est = cov(patch_1');
+    % sizes derived from cov matrix
+    cov0_inv = pinv(cov0_est);
+    cov1_inv = pinv(cov1_est);
+    logdet0 = logdetAmitay(cov0_est);
+    logdet1 = logdetAmitay(cov1_est);
+    area = sqrt(cov_mat_sz);
+    %% compute phi
+    if fast_flag==0
+        % compute phi near zero
+        band_width = min(min(min(phi(phi>0))),abs(max(max(phi(phi<0)))));
+        stop = 0;
+        while stop ==0
+            tmp_p = and(phi>=0,phi<band_width);
+            tmp_m = and(phi<0,phi>-band_width);
+            if nnz(tmp_p)+nnz(tmp_m)>0.5*size(phi,1)*size(phi,2)
+                break
+            end
+            band_width = 2*band_width;
+        end
+        [row,col] = find(and(phi<band_width,phi>-band_width)); 
+        for i=1:size(row,1)
+            if and(and(2<=row(i),row(i)<=size(phi,1)-rem(size(phi,1),area)-1),and(2<=col(i),col(i)<=size(phi,2)-rem(size(phi,2),area)-1))==1
+                    patch_r = ceil(row(i)/area);
+                    patch_c = ceil(col(i)/area);
+                    f = reshape(I((patch_r-1)*area+1:patch_r*area,(patch_c-1)*area+1:patch_c*area),[],1);      
+                    phi(row(i),col(i)) = timeEvCov(f,phi(row(i)-1:row(i)+1,col(i)-1:col(i)+1),mu,nu,...
+                               mu0_est,cov0_inv,logdet0,mu1_est,cov1_inv,logdet1,dt,eta,Eps);
+            end
+        end
+    end
+    if fast_flag==1
+        phi_old = phi;
+        for i=2:size(phi,1)-rem(size(phi,1),area)-1
+            parfor j=2:size(phi,2)-rem(size(phi,2),area)-1
+                patch_r = ceil(i/area);
+                patch_c = ceil(j/area);
+                f = reshape(I((patch_r-1)*area+1:patch_r*area,(patch_c-1)*area+1:patch_c*area),[],1);                  
+                phi(i,j)=timeEvCov(f,phi_old(i-1:i+1,j-1:j+1),mu,nu,...
+                               mu0_est,cov0_inv,logdet0,mu1_est,cov1_inv,logdet1,dt,eta,Eps);
+            end
         end
     end
     
+    if fast_flag==2
+        for i = 1:area:size(phi,1)-rem(size(phi,1),area)-1
+            for j  = 1:area:size(phi,2)-rem(size(phi,2),area)-1
+                    f = reshape(I(i:area+i-1,j:area+j-1),[],1); 
+                    delta_ij = deltaEps(phi(i,j),Eps);
+                    RT = - nu +(1/size(f,1))*0.5*((logdet1-logdet0)+(f-mu1_est)'*cov1_inv*(f-mu1_est)-(f-mu0_est)'*cov0_inv*(f-mu0_est));
+                    phi(i:area+i-1,j:area+j-1) = phi(i:area+i-1,j:area+j-1) + dt * delta_ij * RT; 
+%                     phi(i:area+i-1,j:area+j-1) =  sign(RT);
+            end
+        end
+    end
     % boundary condition
     phi = NeumannBoundCondMod(phi); 
     
     % stopping criteria
     if mod(iter,5) == 0 && iter > 10
-        area_new = phi>0; area_old = phi_old>0;
+        area_new = phi>0; area_old = phi_old_stop>0;
         changed_area =abs(area_new - area_old);
-%         changedArea = (phi>0 | phiOld) - (phi>0 & phiOld); %union minus intersection
-%         changedArea = sum(changedArea(:));
-
         if sum(changed_area(:))/sum(area_old(:)) < tol
-%             fprintf('%%%%   stopped at %d-th iteration   %%%%\n',iter);
             break
         end
     end
     if mod(iter,5) == 0 
-        phi_old = phi;
+        phi_old_stop = phi;
     end
 end
 

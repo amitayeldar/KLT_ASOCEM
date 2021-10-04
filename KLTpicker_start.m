@@ -94,18 +94,8 @@ do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'Y');
 if do_create==1
     addpath('./matlab/ASOCEM_functions');
     use_ASOCEM = 1;
-    smoothing_term='';
-while isempty(smoothing_term)
-    smoothing_term_str =fmtinput('Enter the smoothing_term 1 for max smoothing and 0 not to smooth: ','','%s');
-    smoothing_term = str2double(smoothing_term_str);
-    if or(smoothing_term<0,smoothing_term>1)
-        fprintf('smoothing_term should be a number between 0 to 1.\n');
-        smoothing_term='';
-    end
-end
 else
     use_ASOCEM = 0;
-    smoothing_term = 0;
 end
 
 message='Do you want to use the GPU?';
@@ -117,5 +107,5 @@ else
 end
 
 
-KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,smoothing_term,gpu_use)
+KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,gpu_use)
 

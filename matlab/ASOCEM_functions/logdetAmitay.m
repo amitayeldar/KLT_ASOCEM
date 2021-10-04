@@ -1,7 +1,7 @@
 function logdet = logdetAmitay(A)
-    th = 10^-8;
     [~,D] =  eig(A);
     D = diag(D);
+    th = 10^-8;
     logdet = 0;
     for i=1:size(D,1)
         if D(i)>th

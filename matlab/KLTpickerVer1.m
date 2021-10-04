@@ -1,4 +1,4 @@
-function KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,smoothing_term,gpu_use)
+function KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,gpu_use)
 % 
 % KLT picker
 % 
@@ -128,63 +128,53 @@ parfor expNum = 1:numOfMicro
     mcSz = size(mg);
 
     %% Cutoff filter
+    noiseMc = mg; 
     bandPass1d = fir1(patchSz-1, [0.05 0.95]);
     bandPass2d  = ftrans2(bandPass1d); %% radial bandpass
     if gpu_use == 1
-        mg = imfilter(gpuArray(mg), bandPass2d);
-        mg = gather(mg);
+        noiseMc = imfilter(gpuArray(noiseMc), bandPass2d);
+        noiseMc = gather(noiseMc);
     else
-        mg = imfilter(mg, bandPass2d);
+        noiseMc = imfilter(noiseMc, bandPass2d);
     end
-    noiseMc = mg; 
     
     %% contamination removal using ASOCEM
     if use_ASOCEM==1
         I0 = double(mgBig);
-        maxIterAsocem=200;
-        area_mat_sz = 9; % after down scaling to 200*200
+        maxIterAsocem=300;
+        downscale_size = 400;
+        contamination_criterion = 0; % that means by size.
+        fast_flag = 2; % that means fast.
+        area_size = 5; % after down scaling to 400*400
         % run ASOCEM
-        [phi] = ASOCEM(I0,area_mat_sz,smoothing_term,maxIterAsocem);
+        [phi] = ASOCEM(I0,downscale_size,area_size,contamination_criterion,fast_flag,maxIterAsocem);
         if phi==ones(size(phi)) % all is contamination dont pick
-            continue
+             continue
         end
-
+        % get rid of the edges
+        scalingSz = downscale_size/max(size(I0));
+        d = max(3,ceil(scalingSz*particle_size/8));
+        phi(1:d,:) = 0; phi(end-d+1:end,:)=0; phi(:,1:d)=0; phi(:,end-d+1:end)=0;
         % get rid of blubs the size of the particle
-        phi_seg = imbinarize(zeros(size(phi)));
-        scalingSz = 200/max(size(I0));
-        min_bulb_size = floor(2*scalingSz*particle_size/2);
-%         se_dil = strel('disk',ceil(max(1,scalingSz*particle_size/8)));
-        se_dil = strel('disk',1);
-        se_erod = strel('disk',min_bulb_size);
-        CC = bwconncomp(phi>0,8);
+        phi_seg = imbinarize(zeros(size(phi)));%     min_bulb_size = floor(2*scalingSz*particle_size/2);
+        se_erod = strel('square',max(area_size,ceil(scalingSz*particle_size/6)));
+        phi_erod = imerode(phi>0,se_erod);
+        CC = bwconncomp(phi_erod,8);
         for i =1:size(CC.PixelIdxList,2)
-            if size(CC.PixelIdxList{i},1)> (scalingSz*particle_size)^2 
-                tmp = zeros(size(phi));
-                tmp(CC.PixelIdxList{i})= 1;
-                tmp_dil = imdilate(tmp,se_dil);
-                tmp_erode = imerode(tmp_dil,se_erod);
-                if nnz(tmp_erode(:)) > 0
+            if size(CC.PixelIdxList{i},1)> (scalingSz*2*particle_size)^2 
                     phi_seg(CC.PixelIdxList{i})=1;
-                end
             end
         end 
-        t = ceil(area_mat_sz/2+1);
-        % we do not know about the boundary of the image hence is contamination
-        phi_seg(1:t,:) = 1;
-        phi_seg(end-t:end,:) = 1;
-        phi_seg(:,1:t) = 1;
-        phi_seg(:,end-t:end) = 1;
-        % resizing phi_seg to original image
-        phi_seg = imresize(phi_seg,size(noiseMc));
-
+        phi_seg = imdilate(phi_seg,se_erod);
+        f=figure('visible', 'off');
+        subplot(1,2,1); imshow(cryo_downsample(I0,200),[]);
+        subplot(1,2,2); imshow(imresize(phi_seg,[200,200]),[]);
+        mkdir([output_dir,'/AsocamFigs']);
+        saveas(f,[output_dir,'/AsocamFigs/',microName,'.jpg'])
+        phi_seg = imresize(phi_seg,size(mg));
     else
-        phi_seg = zeros(size(noiseMc));
+        phi_seg = zeros(size(mg));
     end
-    f=figure('visible', 'off');
-    subplot(1,2,1); imshow(cryo_downsample(I0,200),[]);
-    subplot(1,2,2); imshow(imresize(phi_seg,[200,200]),[]);
-    mkdir([output_dir,'/AsocamFigs']);
-    saveas(f,[output_dir,'/AsocamFigs/',microName,'.jpg'])
     %% Estimating particle and noise RPSD
     [apprxCleanPsd,apprxNoisePsd,~,R,~,stopPar] = rpsd_estimation(noiseMc,phi_seg,patchSz,maxIter,gpu_use);
     if stopPar==1 % maxIter happend, skip to next micro graph
@@ -207,11 +197,21 @@ parfor expNum = 1:numOfMicro
    
     %% PreWhitening the micrograph
     apprxNoisePsd = apprxNoisePsd +(median(apprxNoisePsd)*(10^-1));% we dont want zeros
-    [noiseMc] = prewhite(noiseMc,apprxNoisePsd,apprxCleanPsd,mcSz,patchSz,R);
+    [mgPrewhite] = prewhite(mg,apprxNoisePsd,apprxCleanPsd,mcSz,patchSz,R);
     
     %% Re estimating particle and noise RPSD
-    noiseMc = noiseMc - mean(noiseMc(:));
-    noiseMc = noiseMc/norm(noiseMc,'fro'); % normalization; 
+    mgPrewhite = mgPrewhite - mean(mgPrewhite(:));
+    mgPrewhite = mgPrewhite/norm(mgPrewhite,'fro'); % normalization;
+    %% Cutoff filter
+    noiseMc = mgPrewhite; 
+    bandPass1d = fir1(patchSz-1, [0.05 0.95]);
+    bandPass2d  = ftrans2(bandPass1d); %% radial bandpass
+    if gpu_use == 1
+        noiseMc = imfilter(gpuArray(noiseMc), bandPass2d);
+        noiseMc = gather(noiseMc);
+    else
+        noiseMc = imfilter(noiseMc, bandPass2d);
+    end
     [apprxCleanPsd,apprxNoisePsd,noiseVar,R,~,stopPar] = rpsd_estimation(noiseMc,phi_seg,patchSz,maxIter,gpu_use);
     if stopPar==1 % maxIter happend, skip to next micro graph
         continue
@@ -253,7 +253,7 @@ parfor expNum = 1:numOfMicro
 
 
     %% particle detection
-    [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,eigFun,eigVal,numOfFun,noiseVar,mcSz,mgScale,radMat,mgBigSz,patchSzPickBox,patchSzFun,num_of_particles,num_of_noise_images,coordinatsPathParticle,coordinatsPathNoise,microName,thresh,gpu_use);
+    [numOfPickedPar,numOfPickedNoise] = particle_detection(mgPrewhite,phi_seg,eigFun,eigVal,numOfFun,noiseVar,mcSz,mgScale,radMat,mgBigSz,patchSzPickBox,patchSzFun,num_of_particles,num_of_noise_images,coordinatsPathParticle,coordinatsPathNoise,microName,thresh,gpu_use);
     microNames{expNum} = microName;
     pickedParPerMic(expNum) = numOfPickedPar;
     pickedNoisePerMic(expNum) = numOfPickedNoise;

@@ -61,7 +61,7 @@ function [numOfPickedPar,numOfPickedNoise] = picking_from_scoring_mat(logTestN,p
             ci = max(i_colPatch-t,1); cf = min(i_colPatch+t,size(phi_seg,2));   
             if nnz(phi_seg(ri:rf,ci:cf)) > 0
                 rowIdxB = rowIdx-i_row;
-                colIdxB = colIdx-i_col;
+                colIdxB = colIdx-i_col
                 Rsquare = rowIdxB.^2+colIdxB.^2;
                 scoringMat(Rsquare<=(rDel^2)) = -inf;
                 continue
