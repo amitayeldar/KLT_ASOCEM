@@ -109,7 +109,7 @@ print_progress % Call without paramters to reset all progress variables
 progressQ=parallel.pool.DataQueue;
 afterEach(progressQ, @print_progress); % function defined at the end
 
-parfor expNum = 1:numOfMicro
+for expNum = 1:numOfMicro
     startT=clock;
     [~, microName] = fileparts(files(expNum).name);
     mgBig = ReadMRC([files(expNum).folder,'/',files(expNum).name]);
@@ -123,20 +123,7 @@ parfor expNum = 1:numOfMicro
     if mod(size(mg,2),2) == 0 % we need odd size
         mg = mg(1:end,1:end-1);
     end
-    mg = mg - mean(mg(:));
-    mg = mg/norm(mg,'fro'); % normalization; 
-    mcSz = size(mg);
-
-    %% Cutoff filter
-    noiseMc = mg; 
-    bandPass1d = fir1(patchSz-1, [0.05 0.95]);
-    bandPass2d  = ftrans2(bandPass1d); %% radial bandpass
-    if gpu_use == 1
-        noiseMc = imfilter(gpuArray(noiseMc), bandPass2d);
-        noiseMc = gather(noiseMc);
-    else
-        noiseMc = imfilter(noiseMc, bandPass2d);
-    end
+ 
     
     %% contamination removal using ASOCEM
     if use_ASOCEM==1
@@ -175,6 +162,23 @@ parfor expNum = 1:numOfMicro
     else
         phi_seg = zeros(size(mg));
     end
+    
+    %% normalization
+    tmp = mg(phi_seg<=0);
+    mg = mg - mean(tmp(:));
+    mg = mg/norm(tmp,'fro'); % normalization; 
+    mcSz = size(mg);
+
+    %% Cutoff filter
+    noiseMc = mg; 
+    bandPass1d = fir1(patchSz-1, [0.05 0.95]);
+    bandPass2d  = ftrans2(bandPass1d); %% radial bandpass
+    if gpu_use == 1
+        noiseMc = imfilter(gpuArray(noiseMc), bandPass2d);
+        noiseMc = gather(noiseMc);
+    else
+        noiseMc = imfilter(noiseMc, bandPass2d);
+    end
     %% Estimating particle and noise RPSD
     [apprxCleanPsd,apprxNoisePsd,~,R,~,stopPar] = rpsd_estimation(noiseMc,phi_seg,patchSz,maxIter,gpu_use);
     if stopPar==1 % maxIter happend, skip to next micro graph
@@ -199,9 +203,12 @@ parfor expNum = 1:numOfMicro
     apprxNoisePsd = apprxNoisePsd +(median(apprxNoisePsd)*(10^-1));% we dont want zeros
     [mgPrewhite] = prewhite(mg,apprxNoisePsd,apprxCleanPsd,mcSz,patchSz,R);
     
+    
     %% Re estimating particle and noise RPSD
-    mgPrewhite = mgPrewhite - mean(mgPrewhite(:));
-    mgPrewhite = mgPrewhite/norm(mgPrewhite,'fro'); % normalization;
+    % normalization
+    tmp = mgPrewhite(phi_seg<=0);
+    mgPrewhite = mgPrewhite - mean(tmp(:));
+    mgPrewhite = mgPrewhite/norm(tmp,'fro'); % normalization;
     %% Cutoff filter
     noiseMc = mgPrewhite; 
     bandPass1d = fir1(patchSz-1, [0.05 0.95]);
