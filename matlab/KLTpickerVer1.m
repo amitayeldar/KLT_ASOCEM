@@ -179,11 +179,7 @@ parfor expNum = 1:numOfMicro
     %% normalization
     tmp = mg(phi_seg<=0);
     mg = mg - mean(tmp(:));
-<<<<<<< HEAD
     mg = mg/norm(tmp - mean(tmp(:)),'fro'); % normalization; 
-=======
-    mg = mg/norm(tmp- mean(tmp(:)),'fro'); % normalization; 
->>>>>>> cc2ab7ea0f19665f19e0b7d7c21bc1bd030c2889
     mcSz = size(mg);
 
     %% Cutoff filter
@@ -225,11 +221,7 @@ parfor expNum = 1:numOfMicro
     % normalization
     tmp = mgPrewhite(phi_seg<=0);
     mgPrewhite = mgPrewhite - mean(tmp(:));
-<<<<<<< HEAD
     mgPrewhite = mgPrewhite/norm(tmp - mean(tmp(:)),'fro'); % normalization;
-=======
-    mgPrewhite = mgPrewhite/norm(tmp- mean(tmp(:)),'fro'); % normalization;
->>>>>>> cc2ab7ea0f19665f19e0b7d7c21bc1bd030c2889
     %% Cutoff filter
     noiseMc = mgPrewhite; 
     bandPass1d = fir1(patchSz-1, [0.05 0.95]);
