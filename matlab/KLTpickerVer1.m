@@ -128,7 +128,7 @@ parfor expNum = 1:numOfMicro
     %% contamination removal using ASOCEM
     if use_ASOCEM==1
         I0 = imgaussfilt(mgBig,1);
-        maxIterAsocem=800;
+        maxIterAsocem=300;
         downscale_size = 600;
         contamination_criterion = 0; % that means by size.
         fast_flag = 2; % that means fast.
@@ -160,7 +160,7 @@ parfor expNum = 1:numOfMicro
         phi_erod = imerode(phi>0,se_erod);
         CC = bwconncomp(phi_erod,8);
         for i =1:size(CC.PixelIdxList,2)
-            if size(CC.PixelIdxList{i},1)> (scalingSz*particle_size)^2 %xxx
+            if size(CC.PixelIdxList{i},1)> (scalingSz*particle_size)^2
                     phi_seg(CC.PixelIdxList{i})=1;
             end
         end 
@@ -170,7 +170,7 @@ parfor expNum = 1:numOfMicro
         subplot(1,2,2); imshow(imresize(phi_seg,[200,200]),[]);
         mkdir([output_dir,'/AsocamFigs']);
         saveas(f,[output_dir,'/AsocamFigs/',microName,'.jpg'])
-        WriteMRC(imresize(phi_seg,size(mgBig)),1,[output_dir,'/AsocamFigs/',microName,'.mrc'])
+%         WriteMRC(imresize(phi_seg,size(mgBig)),1,[output_dir,'/AsocamFigs/',microName,'.mrc'])
         phi_seg = imresize(phi_seg,size(mg));
     else
         phi_seg = zeros(size(mg));
