@@ -1,0 +1,9 @@
+Picking Summery
+Picked 133 particles and 0 noise images out of 1 micrographs.
+
+Picking per micrograph:
+Micrographs name #1
+Number of picked particles #2
+Number of picked noise images #3
+--------------------------------
+037	133	0

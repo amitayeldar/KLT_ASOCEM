@@ -92,7 +92,6 @@ end
 message='Do you want to use ASOCEM for contamination removal?';
 do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'Y');
 if do_create==1
-    addpath('./matlab/ASOCEM_functions');
     use_ASOCEM = 1;
 else
     use_ASOCEM = 0;
