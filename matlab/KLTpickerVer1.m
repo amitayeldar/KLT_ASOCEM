@@ -109,7 +109,7 @@ print_progress % Call without paramters to reset all progress variables
 progressQ=parallel.pool.DataQueue;
 afterEach(progressQ, @print_progress); % function defined at the end
 
-for expNum = 1:numOfMicro
+parfor expNum = 1:numOfMicro
     startT=clock;
     [~, microName] = fileparts(files(expNum).name);
     mgBig = ReadMRC([files(expNum).folder,'/',files(expNum).name]);
@@ -127,13 +127,25 @@ for expNum = 1:numOfMicro
     
     %% contamination removal using ASOCEM
     if use_ASOCEM==1
-        I0 = double(mgBig);
-        maxIterAsocem=300;
-        downscale_size = 400;
+        I0 = imgaussfilt(mgBig,1);
+        maxIterAsocem=800;
+        downscale_size = 600;
         contamination_criterion = 0; % that means by size.
         fast_flag = 2; % that means fast.
         area_size = 5; % after down scaling to 400*400
         % run ASOCEM
+        stop_d =0;
+        while stop_d == 0
+            if rem(downscale_size,area_size) == 0
+                if rem(downscale_size,2) ==1
+                   stop_d = 1;
+                end
+            end
+            if stop_d == 0
+                downscale_size = downscale_size -1;
+            end
+        end
+
         [phi] = ASOCEM(I0,downscale_size,area_size,contamination_criterion,fast_flag,maxIterAsocem);
         if phi==ones(size(phi)) % all is contamination dont pick
              continue
@@ -148,7 +160,7 @@ for expNum = 1:numOfMicro
         phi_erod = imerode(phi>0,se_erod);
         CC = bwconncomp(phi_erod,8);
         for i =1:size(CC.PixelIdxList,2)
-            if size(CC.PixelIdxList{i},1)> (scalingSz*2*particle_size)^2 
+            if size(CC.PixelIdxList{i},1)> (scalingSz*particle_size)^2 %xxx
                     phi_seg(CC.PixelIdxList{i})=1;
             end
         end 
@@ -158,6 +170,7 @@ for expNum = 1:numOfMicro
         subplot(1,2,2); imshow(imresize(phi_seg,[200,200]),[]);
         mkdir([output_dir,'/AsocamFigs']);
         saveas(f,[output_dir,'/AsocamFigs/',microName,'.jpg'])
+        WriteMRC(imresize(phi_seg,size(mgBig)),1,[output_dir,'/AsocamFigs/',microName,'.mrc'])
         phi_seg = imresize(phi_seg,size(mg));
     else
         phi_seg = zeros(size(mg));
@@ -166,7 +179,7 @@ for expNum = 1:numOfMicro
     %% normalization
     tmp = mg(phi_seg<=0);
     mg = mg - mean(tmp(:));
-    mg = mg/norm(tmp,'fro'); % normalization; 
+    mg = mg/norm(tmp - mean(tmp(:)),'fro'); % normalization; 
     mcSz = size(mg);
 
     %% Cutoff filter
@@ -208,7 +221,7 @@ for expNum = 1:numOfMicro
     % normalization
     tmp = mgPrewhite(phi_seg<=0);
     mgPrewhite = mgPrewhite - mean(tmp(:));
-    mgPrewhite = mgPrewhite/norm(tmp,'fro'); % normalization;
+    mgPrewhite = mgPrewhite/norm(tmp - mean(tmp(:)),'fro'); % normalization;
     %% Cutoff filter
     noiseMc = mgPrewhite; 
     bandPass1d = fir1(patchSz-1, [0.05 0.95]);
