@@ -46,7 +46,9 @@ function [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,
     Pfull = zeros(size(Q)); 
     Pfull(1:size(Tmat,1),1:1:size(Tmat,2)) = P;
     mu = logdet((1/noiseVar)*kapa);
-    noiseMcGpu = gpuArray(single(noiseMc));
+    if gpu_use==1
+        noiseMcGpu = gpuArray(single(noiseMc));
+    end
 
     % Iterating on the patches
     lastBlockRow = mcSz(1)-patchSzFun+1;
@@ -69,7 +71,7 @@ function [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,
             scoreTmp = conv2(noiseMcGpu,qptmp,'valid');  % compute the ith component of the diagonelized bilinear form
             logTestMat = logTestMat + D(i,i)*abs(scoreTmp.^2); % D(i,i) is real.
         else
-            scoreTmp = conv2(noiseMcGpu,qptmp,'valid'); % compute the ith component of the diagonelized bilinear form
+            scoreTmp = conv2(noiseMc,qptmp,'valid'); % compute the ith component of the diagonelized bilinear form
             logTestMat = logTestMat + D(i,i)*abs(scoreTmp.^2);% D(i,i) is real.
         end
     end
