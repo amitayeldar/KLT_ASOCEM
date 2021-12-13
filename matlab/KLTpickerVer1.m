@@ -63,7 +63,7 @@ if preProcessStage == 1
     T = 1; % Nyquist sampling rate
     bandLimit = pi/T;
     radMax =  floor((patchSzFun-1)/2);
-    x = single(-radMax:1:radMax);
+    x = double(-radMax:1:radMax);
     [X,Y] = meshgrid(x);
     radMat = sqrt(X.^2+Y.^2); theta = atan2(Y,X);
     szRadMat = size(radMat);
@@ -74,27 +74,27 @@ if preProcessStage == 1
     numOfQuadKer =2^7;
     numOfQuadNys = 2^7;
     [rho,quadKer] = lgwt(numOfQuadKer,0,bandLimit);
-    rho = flipud(single(rho)); quadKer = flipud(single(quadKer)); 
+    rho = flipud(double(rho)); quadKer = flipud(double(quadKer)); 
     [r,quadNys] = lgwt(numOfQuadNys,0,radMax);
-    r = flipud(single(r)); quadNys = flipud(single(quadNys));
+    r = flipud(double(r)); quadNys = flipud(double(quadNys));
     % mat for finding eig
     rr = r*r';
     rRho = r*rho'; 
     % mat for sampeling eigfunction
-    One = single(ones(length(rSamp),1));
+    One = double(ones(length(rSamp),1));
     rSampr = One*r';
     rSampRho = rSamp*rho';
     sqrtrSampr = sqrt(rSampr);
-    JrRho = single(zeros(size(rRho,1),size(rRho,2),length(0:maxOrder-1)));
-    Jsamp = single(zeros(size(rSampRho,1),size(rSampRho,2),length(0:maxOrder-1)));
-    cosine = single(zeros(length(theta),length(0:maxOrder-1)));
-    sine = single(zeros(length(theta),length(0:maxOrder-1))); 
+    JrRho = double(zeros(size(rRho,1),size(rRho,2),length(0:maxOrder-1)));
+    Jsamp = double(zeros(size(rSampRho,1),size(rSampRho,2),length(0:maxOrder-1)));
+    cosine = double(zeros(length(theta),length(0:maxOrder-1)));
+    sine = double(zeros(length(theta),length(0:maxOrder-1))); 
     parfor N=0:maxOrder-1
-       JrRho(:,:,N+1) = single(besselj(N,rRho)); 
-       Jsamp(:,:,N+1) = single(besselj(N,rSampRho));
+       JrRho(:,:,N+1) = double(besselj(N,rRho)); 
+       Jsamp(:,:,N+1) = double(besselj(N,rSampRho));
         if N~=0
-            cosine(:,N+1) = single(cos(N*theta));
-            sine(:,N+1) = single(sin(N*theta));
+            cosine(:,N+1) = double(cos(N*theta));
+            sine(:,N+1) = double(sin(N*theta));
         end
     end
     

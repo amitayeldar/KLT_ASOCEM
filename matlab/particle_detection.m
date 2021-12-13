@@ -47,7 +47,7 @@ function [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,
     Pfull(1:size(Tmat,1),1:1:size(Tmat,2)) = P;
     mu = logdet((1/noiseVar)*kapa);
     if gpu_use==1
-        noiseMcGpu = gpuArray(single(noiseMc));
+        noiseMcGpu = gpuArray(double(noiseMc));
     end
 
     % Iterating on the patches
