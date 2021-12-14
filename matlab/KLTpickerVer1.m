@@ -20,7 +20,7 @@ function KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles
 % Picking summery text file in output_dir.
          
 %% Initielizing parameters
-mgScale = 100/particle_size; % scaling to particle size of 100  pix which seems to give good results in practice
+mgScale = 101/particle_size; % scaling to particle size of 101 should be odd number  pix which seems to give good results in practice
 files = dir([micrograph_addr,'/','*.mrc']);
 numOfMicro = size(files,1);
 patchSz = floor(0.8*mgScale*particle_size);% apprx Par size after downSampling
