@@ -35,16 +35,16 @@ function [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,
         tmpFun = reshape(eigFunStat(:,i),patchSzFun,patchSzFun);
         tmpFun(radMat>floor((patchSzFun-1)/2)) = 0; % puting zero outside the disk
         eigFunStat(:,i) = tmpFun(:);
-    end
+    end 
 
-    [Q,ar] = qr(eigFunStat);
+    [Q,ar] = qr(eigFunStat,0);
     ar = ar(1:numOfFun,1:numOfFun);
     kapa = ar*diag(eigValStat)*ar'+noiseVar*eye(numOfFun);
     kapaInv = inv(kapa);
     Tmat=(1/noiseVar)*eye(numOfFun)-kapaInv;
     [P,D] = eig(Tmat);
-    Pfull = zeros(size(Q)); 
-    Pfull(1:size(Tmat,1),1:1:size(Tmat,2)) = P;
+%     Pfull = zeros(size(Q)); 
+%     Pfull(1:size(Tmat,1),1:1:size(Tmat,2)) = P;
     mu = logdet((1/noiseVar)*kapa);
     if gpu_use==1
         noiseMcGpu = gpuArray(double(noiseMc));
@@ -57,7 +57,7 @@ function [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,
     numOfPatchCol = length(1:1:lastBlockCol);
     
     % Computes Loglikelyhood test of each patch with conv
-    QP = Q*Pfull;
+    QP = Q*P;
     if gpu_use==1
         logTestMat = gpuArray(zeros(numOfPatchRow,numOfPatchCol));
     else

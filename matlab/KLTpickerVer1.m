@@ -68,8 +68,7 @@ if preProcessStage == 1
     radMat = sqrt(X.^2+Y.^2); theta = atan2(Y,X);
     szRadMat = size(radMat);
     name=[' max order ',num2str(maxOrder),' precentOfEig ',num2str(precentOfEig)]; % for figures
-%     rSamp = radMat(:);
-    [rSamp,~,idxRsamp] = unique(radMat(:));
+    [rSamp,~,idxRsamp] = uniquetol(radMat(:),1e-14);
     theta = theta(:);
     numOfQuadKer =2^7;
     numOfQuadNys = 2^7;
@@ -261,6 +260,7 @@ parfor expNum = 1:numOfMicro
         title(figName);
     end
     [eigFun,eigVal] = construct_klt_templates(rho,quadKer,quadNys,rr,sqrtrSampr,JrRho,Jsamp,cosine,sine,numOfQuadNys,maxOrder,psd,precentOfEig,idxRsamp,gpu_use);
+   save('noUnique','eigFun','eigVal','mgPrewhite');
    if size(eigFun,2) < MaxNumOfFun 
         numOfFun = size(eigFun,2);
    else
