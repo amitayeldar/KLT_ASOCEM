@@ -125,6 +125,7 @@ parfor expNum = 1:numOfMicro
  
     
     %% contamination removal using ASOCEM
+
     if use_ASOCEM==1
         I0 = imgaussfilt(mgBig,1);
         maxIterAsocem=300;
@@ -260,16 +261,16 @@ parfor expNum = 1:numOfMicro
         title(figName);
     end
     [eigFun,eigVal] = construct_klt_templates(rho,quadKer,quadNys,rr,sqrtrSampr,JrRho,Jsamp,cosine,sine,numOfQuadNys,maxOrder,psd,precentOfEig,idxRsamp,gpu_use);
-   save('noUnique','eigFun','eigVal','mgPrewhite');
+
    if size(eigFun,2) < MaxNumOfFun 
         numOfFun = size(eigFun,2);
    else
         numOfFun = MaxNumOfFun;
    end
-    for i = 1:size(eigFun,2)
-       
+%     for i = 1:size(eigFun,2)
+%        
 %         tmpFun(:,:,i) = reshape(eigFunStat(:,i),patchSzFun,patchSzFun);
-    end
+%     end
 
 
     %% particle detection

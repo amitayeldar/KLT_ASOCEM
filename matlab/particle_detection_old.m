@@ -1,4 +1,4 @@
-function [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,eigFun,eigVal,numOfFun,noiseVar,mcSz,mgScale,radMat,mgBigSz,patchSzPickBox,patchSzFun,num_of_particles,num_of_noise_images,coordinatsPathParticle,coordinatsPathNoise,microName,thresh,gpu_use)
+function [numOfPickedPar,numOfPickedNoise] = particle_detection_old(noiseMc,phi_seg,eigFun,eigVal,numOfFun,noiseVar,mcSz,mgScale,radMat,mgBigSz,patchSzPickBox,patchSzFun,num_of_particles,num_of_noise_images,coordinatsPathParticle,coordinatsPathNoise,microName,thresh,gpu_use)
 % Construct the scoring matrix and then use the picking_from_scoring_mat
 % function to pick particles and noise images.
 % 
@@ -30,28 +30,30 @@ function [numOfPickedPar,numOfPickedNoise] = particle_detection(noiseMc,phi_seg,
 % numOfPickedPar        number of picked noise images.
 
 eigFunStat = eigFun(:,1:numOfFun); eigValStat = eigVal(1,1:numOfFun);
-
     for i = 1:numOfFun
         tmpFun = reshape(eigFunStat(:,i),patchSzFun,patchSzFun);
         tmpFun(radMat>floor((patchSzFun-1)/2)) = 0; % puting zero outside the disk
         eigFunStat(:,i) = tmpFun(:);
     end 
     
+
 %     per = randperm(size(eigFunStat,2));
 %     tmp_f = eigFunStat(:,per);tmp_v = eigValStat(:,per);
 %     eigFunStat = tmp_f;
 %     eigValStat = tmp_v;
 
-    C_p = eigFunStat*diag(eigValStat)*(eigFunStat');
-    C_p = 0.5*(C_p + C_p');
-    [P,E] = eig(C_p);
-    [E,I] = sort(diag(E),'descend');
-    E = diag(E);
-    P = P(:,I);
-    E_econ = E(1:numOfFun,1:numOfFun);
-    kapa = E_econ+noiseVar*eye(numOfFun);
+    [Q,ar] = qr(eigFunStat,0);
+    ar = ar(1:numOfFun,1:numOfFun);
+    kapa = ar*diag(eigValStat)*ar'+noiseVar*eye(numOfFun);
     kapaInv = inv(kapa);
     Tmat=(1/noiseVar)*eye(numOfFun)-kapaInv;
+    Tmat = 0.5*(Tmat+Tmat');
+    [P,D] = eig(Tmat);
+    [D,I] = sort(diag(D),'descend');
+    D = diag(D);
+    P = P(:,I);
+%     Pfull = zeros(size(Q)); 
+%     Pfull(1:size(Tmat,1),1:1:size(Tmat,2)) = P;
     mu = logdet((1/noiseVar)*kapa);
     if gpu_use==1
         noiseMcGpu = gpuArray(double(noiseMc));
@@ -64,6 +66,7 @@ eigFunStat = eigFun(:,1:numOfFun); eigValStat = eigVal(1,1:numOfFun);
     numOfPatchCol = length(1:1:lastBlockCol);
     
     % Computes Loglikelyhood test of each patch with conv
+    QP = Q*P;
     if gpu_use==1
         logTestMat = gpuArray(zeros(numOfPatchRow,numOfPatchCol));
     else
@@ -71,19 +74,19 @@ eigFunStat = eigFun(:,1:numOfFun); eigValStat = eigVal(1,1:numOfFun);
     end
 
     for i = 1:numOfFun
-        qptmp = reshape(P(:,i),patchSzFun,patchSzFun); 
+        qptmp = reshape(QP(:,i),patchSzFun,patchSzFun); 
         qptmp = flip(flip(qptmp,1),2);
         if gpu_use==1
             scoreTmp = conv2(noiseMcGpu,qptmp,'valid');  % compute the ith component of the diagonelized bilinear form
-            logTestMat = logTestMat + Tmat(i,i)*(scoreTmp.^2); % Tmat(i,i) is real.
+            logTestMat = logTestMat + D(i,i)*(scoreTmp.^2); % D(i,i) is real.
         else
             scoreTmp = conv2(noiseMc,qptmp,'valid'); % compute the ith component of the diagonelized bilinear form
-            logTestMat = logTestMat + Tmat(i,i)*(scoreTmp.^2);% Tmat(i,i) is real.
+            logTestMat = logTestMat + D(i,i)*(scoreTmp.^2);% D(i,i) is real.
         end
     end
 
     logTestMat = gather(logTestMat)-mu;
-     
+
     % this part is for centering
     patchSzN = patchSzFun;
     if gpu_use==1
