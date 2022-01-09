@@ -19,7 +19,7 @@ function [apprxCleanPsd,apprxNoisePsd,noiseVarApprx,R,apprxScaling,stopPar]= rps
 % apprxScaling   scaling factor for figs later
 % stopPar        stop algorithm if an error occured 
 
-
+rand('twister', 1337)
 % initial parameters
 microSz = min(size(noiseMc));
 m = floor(microSz/patchSz); % Number of patches on each raw and coulomn.

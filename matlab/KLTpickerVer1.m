@@ -129,29 +129,43 @@ parfor expNum = 1:numOfMicro
     if use_ASOCEM==1
         I0 = imgaussfilt(mgBig,1);
         maxIterAsocem=300;
-        downscale_size = 600;
+        downscale_size_max = 600;
         contamination_criterion = 0; % that means by size.
         fast_flag = 2; % that means fast.
-        area_size = 5; % after down scaling to 400*400
+        area_size = 5; % after down scaling to 600*600
         % run ASOCEM
         stop_d =0;
+        
         while stop_d == 0
-            if rem(downscale_size,area_size) == 0
-                if rem(downscale_size,2) ==1
+            if rem(downscale_size_max,area_size) == 0
+                if rem(downscale_size_max,2) ==1
                    stop_d = 1;
                 end
             end
             if stop_d == 0
-                downscale_size = downscale_size -1;
+                downscale_size_max = downscale_size_max -1;
             end
         end
-
-        [phi] = ASOCEM(I0,downscale_size,area_size,contamination_criterion,fast_flag,maxIterAsocem);
+        scalingSz = downscale_size_max/max(size(I0));
+        downscale_size_min = floor(scalingSz*min(size(I0)));
+        stop_d =0;
+        while stop_d == 0
+            if rem(downscale_size_min,area_size) == 0
+                if rem(downscale_size_min,2) ==1
+                   stop_d = 1;
+                end
+            end
+            if stop_d == 0
+                downscale_size_min = downscale_size_min -1;
+            end
+        end
+        
+        [phi] = ASOCEM(I0,downscale_size_max,downscale_size_min,area_size,contamination_criterion,fast_flag,maxIterAsocem);
         if phi==ones(size(phi)) % all is contamination dont pick
              continue
         end
         % get rid of the edges
-        scalingSz = downscale_size/max(size(I0));
+        scalingSz = downscale_size_max/max(size(I0));
         d = max(3,ceil(scalingSz*particle_size/8));
         phi(1:d,:) = 0; phi(end-d+1:end,:)=0; phi(:,1:d)=0; phi(:,end-d+1:end)=0;
         % get rid of blubs the size of the particle

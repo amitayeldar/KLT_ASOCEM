@@ -1,4 +1,4 @@
-function [phi,mu0_est,cov0_est,mu1_est,cov1_est] = ASOCEM(I0,downscale_size,area_mat_sz,contamination_criterion,fast_flag,maxIter)
+function [phi,mu0_est,cov0_est,mu1_est,cov1_est] = ASOCEM(I0,downscale_size_max,downscale_size_min,area_mat_sz,contamination_criterion,fast_flag,maxIter)
 % This function segment contamination in cryo_EM micrographs
 
 % INPUT
@@ -25,15 +25,20 @@ cov_mat_sz = area_mat_sz^2;
 
 %% preprocess image
 % size rescale
-szScaling = downscale_size/max(size(I0));
-I = cryo_downsample(I0,floor(szScaling*size(I0)));
-% image size should be odd
-if mod(size(I,1),2)==0
-    I = I(1:end-1,:);
+[~,max_index] = max(size(I0));
+if max_index==1
+    donwsample_size = [downscale_size_max,downscale_size_min];
+else
+    donwsample_size = [downscale_size_min,downscale_size_max];
 end
-if mod(size(I,2),2)==0
-    I = I(:,1:end-1);
-end
+I = cryo_downsample(I0,donwsample_size);
+% % image size should be odd
+% if mod(size(I,1),2)==0
+%     I = I(1:end-1,:);
+% end
+% if mod(size(I,2),2)==0
+%     I = I(:,1:end-1);
+% end
 
 
 %% intialize phi as liphsiczh circ
