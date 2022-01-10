@@ -108,7 +108,7 @@ print_progress % Call without paramters to reset all progress variables
 progressQ=parallel.pool.DataQueue;
 afterEach(progressQ, @print_progress); % function defined at the end
 
-for expNum = 1:numOfMicro
+parfor expNum = 1:numOfMicro
     startT=clock;
     [~, microName] = fileparts(files(expNum).name);
     mgBig = ReadMRC([files(expNum).folder,'/',files(expNum).name]);
