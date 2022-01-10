@@ -97,6 +97,47 @@ else
     use_ASOCEM = 0;
 end
 
+
+message='Do you want to save ASOCEM masks?';
+do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'N');
+if do_create==1
+    save_ASOCEM_masks = 1;
+else
+    save_ASOCEM_masks = 0;
+end
+
+message='Do you want to change ASOCEM default parameters?';
+do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'N');
+if do_create==1
+   ASOCEM_param = 1;
+   ASOCEM_downsample='';
+   while isempty(ASOCEM_downsample)
+   ASOCEM_downsample_str =fmtinput('Enter ASOCEM downsample rate (should be a positive number): ','','%s');
+   ASOCEM_downsample = str2double(ASOCEM_downsample_str);
+        if ASOCEM_downsample<0
+            fprintf('downsample rate should be positive.\n');
+            ASOCEM_downsample='';
+        end
+   end
+   ASOCEM_area='';
+   while isempty(ASOCEM_area)
+   ASOCEM_area_str =fmtinput('Enter ASOCEM covarience area (should be a positive odd number): ','','%s');
+   ASOCEM_area = str2double(ASOCEM_area_str);
+        if ASOCEM_area<0
+            fprintf('covarience area should be positive.\n');
+            ASOCEM_area='';
+        end
+        if mod(ASOCEM_area,2)==0
+            fprintf('covarience area should be odd.\n');
+            ASOCEM_area='';    
+        end
+    end
+else
+    ASOCEM_param= 0;
+    ASOCEM_downsample= 0;
+    ASOCEM_area = 0;
+end
+
 message='Do you want to use the GPU?';
 do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'Y');
 if do_create==1
@@ -106,5 +147,5 @@ else
 end
 
 
-KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,gpu_use)
+KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,ASOCEM_param,ASOCEM_downsample,ASOCEM_area,save_ASOCEM_masks,gpu_use)
 

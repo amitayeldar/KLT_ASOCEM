@@ -1,4 +1,4 @@
-function KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,gpu_use)
+function KLTpickerVer1(micrograph_addr,output_dir,particle_size,num_of_particles,num_of_noise_images,use_ASOCEM,ASOCEM_param,ASOCEM_downsample,ASOCEM_area,save_ASOCEM_masks,gpu_use)
 % 
 % KLT picker
 % 
@@ -108,7 +108,7 @@ print_progress % Call without paramters to reset all progress variables
 progressQ=parallel.pool.DataQueue;
 afterEach(progressQ, @print_progress); % function defined at the end
 
-parfor expNum = 1:numOfMicro
+for expNum = 1:numOfMicro
     startT=clock;
     [~, microName] = fileparts(files(expNum).name);
     mgBig = ReadMRC([files(expNum).folder,'/',files(expNum).name]);
@@ -129,10 +129,16 @@ parfor expNum = 1:numOfMicro
     if use_ASOCEM==1
         I0 = imgaussfilt(mgBig,1);
         maxIterAsocem=300;
-        downscale_size_max = 600;
+        if ASOCEM_param==0
+            downscale_size_max = 600;
+            area_size = 5; % after down scaling to 600*600
+        else
+            downscale_size_max = ASOCEM_downsample;
+            area_size = ASOCEM_area; % after down scaling to 600*600  
+        end
         contamination_criterion = 0; % that means by size.
         fast_flag = 2; % that means fast.
-        area_size = 5; % after down scaling to 600*600
+
         % run ASOCEM
         stop_d =0;
         
@@ -179,12 +185,15 @@ parfor expNum = 1:numOfMicro
             end
         end 
         phi_seg = imdilate(phi_seg,se_erod);
-        f=figure('visible', 'off');
-        subplot(1,2,1); imshow(cryo_downsample(I0,200),[]);
-        subplot(1,2,2); imshow(imresize(phi_seg,[200,200]),[]);
-        mkdir([output_dir,'/AsocamFigs']);
-        saveas(f,[output_dir,'/AsocamFigs/',microName,'.jpg'])
-%         WriteMRC(imresize(phi_seg,size(mgBig)),1,[output_dir,'/AsocamFigs/',microName,'.mrc'])
+%         f=figure('visible', 'off');
+%         subplot(1,2,1); imshow(cryo_downsample(I0,200),[]);
+%         subplot(1,2,2); imshow(imresize(phi_seg,[200,200]),[]);
+%         mkdir([output_dir,'/AsocamFigs']);
+%         saveas(f,[output_dir,'/AsocamFigs/',microName,'.jpg'])
+        if save_ASOCEM_masks ==1
+            mkdir([output_dir,'/AsocamMasks']);
+            WriteMRC(imresize(phi_seg,size(mgBig)),1,[output_dir,'/AsocamMasks/',microName,'.mrc'])
+        end
         phi_seg = imresize(phi_seg,size(mg));
     else
         phi_seg = zeros(size(mg));
