@@ -97,45 +97,50 @@ else
     use_ASOCEM = 0;
 end
 
+if use_ASOCEM == 1
+    message='Do you want to save ASOCEM masks?';
+    do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'N');
+    if do_create==1
+        save_ASOCEM_masks = 1;
+    else
+        save_ASOCEM_masks = 0;
+    end
 
-message='Do you want to save ASOCEM masks?';
-do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'N');
-if do_create==1
-    save_ASOCEM_masks = 1;
-else
-    save_ASOCEM_masks = 0;
-end
-
-message='Do you want to change ASOCEM default parameters?';
-do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'N');
-if do_create==1
-   ASOCEM_param = 1;
-   ASOCEM_downsample='';
-   while isempty(ASOCEM_downsample)
-   ASOCEM_downsample_str =fmtinput('Enter ASOCEM downsample image size (should be a positive number): ','','%s');
-   ASOCEM_downsample = str2double(ASOCEM_downsample_str);
-        if ASOCEM_downsample<0
-            fprintf('downsample image size should be positive.\n');
-            ASOCEM_downsample='';
+    message='Do you want to change ASOCEM default parameters?';
+    do_create=multichoice_question(message,{'Y','N'},[ 1, 0],'N');
+    if do_create==1
+       ASOCEM_param = 1;
+       ASOCEM_downsample='';
+       while isempty(ASOCEM_downsample)
+       ASOCEM_downsample_str =fmtinput('Enter ASOCEM downsample image size (should be a positive number): ','','%s');
+       ASOCEM_downsample = str2double(ASOCEM_downsample_str);
+            if ASOCEM_downsample<0
+                fprintf('downsample image size should be positive.\n');
+                ASOCEM_downsample='';
+            end
+       end
+       ASOCEM_area='';
+       while isempty(ASOCEM_area)
+       ASOCEM_area_str =fmtinput('Enter ASOCEM covarience area size (should be a positive odd number): ','','%s');
+       ASOCEM_area = str2double(ASOCEM_area_str);
+            if ASOCEM_area<0
+                fprintf('covarience area size should be positive.\n');
+                ASOCEM_area='';
+            end
+            if mod(ASOCEM_area,2)==0
+                fprintf('covarience area size should be odd.\n');
+                ASOCEM_area='';    
+            end
         end
-   end
-   ASOCEM_area='';
-   while isempty(ASOCEM_area)
-   ASOCEM_area_str =fmtinput('Enter ASOCEM covarience area size (should be a positive odd number): ','','%s');
-   ASOCEM_area = str2double(ASOCEM_area_str);
-        if ASOCEM_area<0
-            fprintf('covarience area size should be positive.\n');
-            ASOCEM_area='';
-        end
-        if mod(ASOCEM_area,2)==0
-            fprintf('covarience area size should be odd.\n');
-            ASOCEM_area='';    
-        end
+    else
+        ASOCEM_param= 0;
+        ASOCEM_downsample= 0;
+        ASOCEM_area = 0;
     end
 else
     ASOCEM_param= 0;
     ASOCEM_downsample= 0;
-    ASOCEM_area = 0;
+    ASOCEM_area = 0;   
 end
 
 message='Do you want to use the GPU?';
