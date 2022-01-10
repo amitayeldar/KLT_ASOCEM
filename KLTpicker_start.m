@@ -112,23 +112,23 @@ if do_create==1
    ASOCEM_param = 1;
    ASOCEM_downsample='';
    while isempty(ASOCEM_downsample)
-   ASOCEM_downsample_str =fmtinput('Enter ASOCEM downsample rate (should be a positive number): ','','%s');
+   ASOCEM_downsample_str =fmtinput('Enter ASOCEM downsample image size (should be a positive number): ','','%s');
    ASOCEM_downsample = str2double(ASOCEM_downsample_str);
         if ASOCEM_downsample<0
-            fprintf('downsample rate should be positive.\n');
+            fprintf('downsample image size should be positive.\n');
             ASOCEM_downsample='';
         end
    end
    ASOCEM_area='';
    while isempty(ASOCEM_area)
-   ASOCEM_area_str =fmtinput('Enter ASOCEM covarience area (should be a positive odd number): ','','%s');
+   ASOCEM_area_str =fmtinput('Enter ASOCEM covarience area size (should be a positive odd number): ','','%s');
    ASOCEM_area = str2double(ASOCEM_area_str);
         if ASOCEM_area<0
-            fprintf('covarience area should be positive.\n');
+            fprintf('covarience area size should be positive.\n');
             ASOCEM_area='';
         end
         if mod(ASOCEM_area,2)==0
-            fprintf('covarience area should be odd.\n');
+            fprintf('covarience area size should be odd.\n');
             ASOCEM_area='';    
         end
     end
